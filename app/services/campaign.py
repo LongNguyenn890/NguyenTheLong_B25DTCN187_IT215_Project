@@ -1,6 +1,10 @@
 from sqlalchemy.orm import Session
 
-from schemas import CampaignCreateSchema, CampaignMemberCreateSchema
+from schemas import (
+    CampaignCreateSchema,
+    CampaignMemberCreateSchema,
+    CampaignUpdateSchema,
+)
 from models import CampaignModel, CampaignMemberModel, UserModel
 
 
@@ -39,38 +43,29 @@ def get_campaign_list(keyword: str, current_user: UserModel, db: Session):
             CampaignMemberModel.role.in_(["owner", "member"]),
         )
 
-        if keyword:
-            query = query.filter(CampaignModel.name.ilike(f"%{keyword}%"))
+    if keyword:
+        query = query.filter(CampaignModel.name.ilike(f"%{keyword}%"))
 
     lst = query.all()
 
     return lst
 
 
-def get_campaign_detail(campaign_id: int, current_user: UserModel, db: Session):
+def get_campaign_detail(campaign_id: int, db: Session):
     query = (
         db.query(CampaignModel)
-        .join(CampaignMemberModel, CampaignMemberModel.campaign_id == CampaignModel.id)
-        .filter(
-            CampaignMemberModel.user_id == current_user.id,
-            CampaignModel.id == campaign_id,
-            CampaignMemberModel.role.in_(["owner", "member"]),
-        )
+        .filter(CampaignModel.id == campaign_id)
     )
-
-    if current_user.role == "admin":
-        query = db.query(CampaignModel).filter(CampaignModel.id == campaign_id)
 
     return query.first()
 
 
 def add_member(
     campaign_id: int,
-    current_user: UserModel,
     campaign_member: CampaignMemberCreateSchema,
     db: Session,
 ):
-    campaign = get_campaign_detail(campaign_id, current_user, db)
+    campaign = get_campaign_detail(campaign_id, db)
 
     user_db = (
         db.query(UserModel).filter(UserModel.id == campaign_member.user_id).first()
@@ -100,3 +95,62 @@ def add_member(
     db.refresh(new_member)
 
     return new_member, None
+
+
+def delete_campaign(campaign_id: int, db: Session):
+
+    campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
+
+    db.delete(campaign)
+    db.commit()
+
+    return None
+
+
+def update_campaign(campaign_id: int, data: CampaignUpdateSchema, db: Session):
+
+    campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
+
+    updated_data = data.model_dump(exclude_unset=True)
+
+    for key, value in updated_data.items():
+        setattr(campaign, key, value)
+
+    db.commit()
+    db.refresh(campaign)
+
+    return campaign
+
+
+def get_all_members(campaign_id: int, db: Session):
+    members = (
+        db.query(UserModel, CampaignMemberModel.role)
+        .join(CampaignMemberModel, CampaignMemberModel.user_id == UserModel.id)
+        .filter(CampaignMemberModel.campaign_id == campaign_id)
+        .all()
+    )
+
+    return [
+        {   
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "role": role.value
+        }
+        for user, role in members
+    ]
+
+
+def delete_member(campaign_id: int, user_id: int, db: Session):
+    member = db.query(CampaignMemberModel).filter(CampaignMemberModel.campaign_id == campaign_id, CampaignMemberModel.user_id == user_id).first()
+    
+    if member is None:
+        return "MEMBER_NOT_EXIST"
+    
+    if member.role == "owner":
+        return "CANNOT_DELETE_OWNER"
+    
+    db.delete(member)
+    db.commit()
+    
+    

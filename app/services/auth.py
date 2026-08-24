@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from schemas import UserRegister, UserLogin
 from models import UserModel
 from core import gen_hashed_password, gen_access_token, verify_password
-from core import MAX_LOGIN
 
 
 def register_user(data: UserRegister, db: Session):
@@ -17,7 +16,7 @@ def register_user(data: UserRegister, db: Session):
     new_user = UserModel(
         email=data.email,
         password_hash=hashed_password,
-        full_name=data.full_name.capitalize(),
+        full_name=data.full_name.title(),
     )
 
     db.add(new_user)
@@ -38,23 +37,10 @@ def login_user(data: UserLogin, db: Session):
         return "ACCOUNT_IS_LOCKED"
 
     if not verify_password(data.password, user_db.password_hash):
-        user_db.login_attempt += 1
-
-        if user_db.login_attempt > int(MAX_LOGIN):
-            user_db.is_active = False
-            db.commit()
-            db.refresh(user_db)
-            return "OVER_MAX_LOGIN_COUNT"
-
-        db.commit()
-        db.refresh(user_db)
-
         return "INVALID_PASSWORD"
 
     access_token = gen_access_token(user_db.email, user_db.full_name, user_db.role)
-    user_db.login_attempt = 0
-    user_db.is_active = True
-
+    
     db.commit()
     db.refresh(user_db)
 

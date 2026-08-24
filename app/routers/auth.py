@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, status, Request, Form
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from core import AppException
 from schemas import UserRegister, APIResponse, UserReponse, TokenResponse, UserLogin
@@ -8,7 +10,7 @@ import services
 from utils import make_success_response
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
+limiter = Limiter(key_func=get_remote_address)
 
 @router.post(
     "/register",
@@ -38,7 +40,8 @@ def register(
 @router.post(
     "/login", status_code=status.HTTP_200_OK, response_model=APIResponse[TokenResponse]
 )
-def login(req: Request, data: UserLogin = Form(...), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, data: UserLogin = Form(...), db: Session = Depends(get_db)):
     access_token = services.login_user(data, db)
 
     if access_token == "INVALID_EMAIL" or access_token == "INVALID_PASSWORD":
@@ -66,5 +69,5 @@ def login(req: Request, data: UserLogin = Form(...), db: Session = Depends(get_d
         status_code=status.HTTP_200_OK,
         message="Đăng nhập thành công",
         data={"access_token": access_token},
-        request=req,
+        request=request,
     )

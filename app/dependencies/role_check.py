@@ -3,7 +3,7 @@ from fastapi import Depends, status
 from sqlalchemy.orm import Session
 from dependencies import get_current_user
 from core import AppException
-from models import UserModel, CampaignMemberModel
+from models import UserModel, CampaignMemberModel, CampaignModel
 from db import get_db
 
 
@@ -34,6 +34,15 @@ class CampaignRoleCheck:
         current_user: UserModel = Depends(get_current_user),
         db: Session = Depends(get_db),
     ):
+        
+        existing_campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
+        
+        if not existing_campaign:
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Truy cập không thành công",
+                error="Chiến dịch không tồn tại"
+            )
 
         if current_user.role == "admin":
             return current_user

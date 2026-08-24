@@ -19,14 +19,13 @@ class UserModel(Base):
     full_name = Column(String(100), nullable=False)
     role = Column(Enum(UserRole), default="user")
     is_active = Column(Boolean, default=True)
-    login_attempt = Column(Integer, default=0)
     created_at = Column(DateTime, nullable=False, default=datetime.now())
 
     campaigns_owned = relationship(
-        "CampaignModel", back_populates="owners"
+        "CampaignModel", back_populates="owner"
     )  # Liên kết bảng Campaign
     campaign_memberships = relationship(
-        "CampaignMemberModel", back_populates="users"
+        "CampaignMemberModel", back_populates="user"
     )  # Liên kết bảng Campaign Member
     assigned_tasks = relationship(
         "CampaignTaskModel", back_populates="assignee"

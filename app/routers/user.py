@@ -33,9 +33,10 @@ def search_user_infor(
     keyword: Optional[str] = Query(
         None, description="Tìm kiếm theo email, tên, trạng thái"
     ),
+    is_active: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
 ):
-    users = search_user(keyword, db)
+    users = search_user(keyword, is_active, db)
 
     return make_success_response(
         status_code=status.HTTP_200_OK,

@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from db import Base, engine
 import models
@@ -8,11 +10,16 @@ from routers import auth_router, user_router, campaign_router
 
 Base.metadata.create_all(bind=engine)
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="Project_FastAPI_marketing",
     version="1.0.0",
     description="Dự án quản lí API về Marketing"
 )
+
+app.state.limiter = limiter
+
 
 app.add_exception_handler(
     AppException,
@@ -24,7 +31,8 @@ def health():
     return {
         "message": "API running"
     }
-    
+   
+
 
 app.include_router(auth_router)
 app.include_router(user_router)

@@ -28,6 +28,15 @@ class CampaignResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+    
+
+class CampaignMemberResponse(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    role: str
+        
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CampaignTaskResponse(BaseModel):

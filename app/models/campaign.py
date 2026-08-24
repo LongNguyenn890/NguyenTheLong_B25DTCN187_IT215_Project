@@ -14,19 +14,19 @@ class CampaignModel(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, nullable=False, default=datetime.now())
 
-    owners = relationship(
+    owner = relationship(
         "UserModel", back_populates="campaigns_owned"
     )  # Liên kết bảng User
     campaign_members = relationship(
-        "CampaignMemberModel", back_populates="campaign"
+        "CampaignMemberModel", back_populates="campaign", cascade="all, delete-orphan"
     )  # Liên kết bảng Campaign Member
     tasks = relationship(
-        "CampaignTaskModel", back_populates="campaign"
+        "CampaignTaskModel", back_populates="campaign", cascade="all, delete-orphan"
     )  # Liên kết bảng Campaign Task
 
 
 class Role(str, enum.Enum):
-    memeber = "member"
+    member = "member"
     owner = "owner"
 
 
@@ -38,4 +38,4 @@ class CampaignMemberModel(Base):
     joined_at = Column(DateTime, nullable=False, default=datetime.now())
 
     campaign = relationship("CampaignModel", back_populates="campaign_members")
-    users = relationship("UserModel", back_populates="campaign_memberships")
+    user = relationship("UserModel", back_populates="campaign_memberships")

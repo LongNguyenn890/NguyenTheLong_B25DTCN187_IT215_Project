@@ -9,7 +9,7 @@ def get_user(email: str, db: Session):
     return db.query(UserModel).filter(UserModel.email == email).first()
 
 
-def search_user(keyword: Optional[str], db: Session):
+def search_user(keyword: Optional[str], status: bool, db: Session):
     query = db.query(UserModel)
 
     if keyword:
@@ -17,8 +17,12 @@ def search_user(keyword: Optional[str], db: Session):
             or_(
                 UserModel.full_name.ilike(f"%{keyword}%"),
                 UserModel.email.ilike(f"%{keyword}%"),
-                UserModel.is_active.ilike(f"%{keyword}%"),
             )
+        )
+        
+    if status:
+        query = query.filter(
+            UserModel.is_active == status
         )
 
     users = query.all()
