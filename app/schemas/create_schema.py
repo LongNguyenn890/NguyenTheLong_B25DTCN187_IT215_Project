@@ -14,6 +14,10 @@ class UserLogin(BaseModel):
     password: str
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
 class CampaignCreateSchema(BaseModel):
     name: str = Field(..., min_length=4, max_length=255)
     description: Optional[str] = None
@@ -24,7 +28,6 @@ class CampaignMemberCreateSchema(BaseModel):
 
 
 class CampaignTaskCreateSchema(BaseModel):
-    campaign_id: int = Field(..., ge=1)
     title: str = Field(..., min_length=4, max_length=255)
     description: Optional[str] = None
     assignee_id: Optional[int] = Field(None, ge=1)

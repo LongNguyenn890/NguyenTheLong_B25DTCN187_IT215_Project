@@ -19,7 +19,7 @@ def search_user(keyword: Optional[str], status: bool, db: Session):
                 UserModel.email.ilike(f"%{keyword}%"),
             )
         )
-        
+
     if status:
         query = query.filter(
             UserModel.is_active == status

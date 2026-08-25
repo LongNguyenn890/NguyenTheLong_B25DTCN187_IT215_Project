@@ -7,6 +7,7 @@ T = TypeVar("T")  # Biến kiểu dữ liệu
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
 
 
@@ -42,12 +43,12 @@ class CampaignMemberResponse(BaseModel):
 class CampaignTaskResponse(BaseModel):
     id: int
     campaign_id: int
-    title: int
+    title: str
     description: Optional[str] = None
     assignee_id: Optional[int] = None
     status: str
     priority: str
-    due_date: Optional[str] = None
+    due_date: Optional[datetime] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

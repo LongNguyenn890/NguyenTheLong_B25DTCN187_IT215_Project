@@ -4,13 +4,21 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from core import AppException
-from schemas import UserRegister, APIResponse, UserReponse, TokenResponse, UserLogin
+from schemas import (
+    APIResponse,
+    RefreshTokenRequest,
+    TokenResponse,
+    UserLogin,
+    UserRegister,
+    UserReponse,
+)
 from db import get_db
 import services
 from utils import make_success_response
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 limiter = Limiter(key_func=get_remote_address)
+
 
 @router.post(
     "/register",
@@ -42,32 +50,81 @@ def register(
 )
 @limiter.limit("5/minute")
 def login(request: Request, data: UserLogin = Form(...), db: Session = Depends(get_db)):
-    access_token = services.login_user(data, db)
+    login_result = services.login_user(data, db)
 
-    if access_token == "INVALID_EMAIL" or access_token == "INVALID_PASSWORD":
+    if login_result in ("INVALID_EMAIL", "INVALID_PASSWORD"):
         raise AppException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Đăng nhập thất bại",
             error="Email hoặc mật khẩu không hợp lệ",
         )
 
-    if access_token == "ACCOUNT_IS_LOCKED":
+    if login_result == "ACCOUNT_IS_LOCKED":
         raise AppException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Đăng nhập thất bại",
             error="Tài khoản đã bị khóa",
         )
 
-    if access_token == "OVER_MAX_LOGIN_COUNT":
+    if login_result == "OVER_MAX_LOGIN_COUNT":
         raise AppException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Tài khoản đã bị khóa",
             error="Vượt quá số lần đăng nhập",
         )
 
+    access_token, refresh_token = login_result
+
     return make_success_response(
         status_code=status.HTTP_200_OK,
         message="Đăng nhập thành công",
-        data={"access_token": access_token},
+        data={
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+        },
         request=request,
+    )
+
+
+@router.post(
+    "/refresh",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[TokenResponse],
+)
+def refresh_token(
+    req: Request,
+    data: RefreshTokenRequest,
+    db: Session = Depends(get_db),
+):
+    access_token = services.refresh_access_token(data.refresh_token, db)
+
+    if access_token == "REFRESH_TOKEN_EXPIRED":
+        raise AppException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Làm mới token thất bại",
+            error="Refresh Token hết hạn",
+        )
+
+    if access_token == "INVALID_REFRESH_TOKEN":
+        raise AppException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Làm mới token thất bại",
+            error="Refresh Token không hợp lệ",
+        )
+
+    if access_token == "ACCOUNT_IS_LOCKED":
+        raise AppException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Làm mới token thất bại",
+            error="Tài khoản đã bị khóa",
+        )
+
+    return make_success_response(
+        status_code=status.HTTP_200_OK,
+        message="Làm mới token thành công",
+        data={
+            "access_token": access_token,
+            "refresh_token": data.refresh_token,
+        },
+        request=req,
     )

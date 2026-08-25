@@ -68,7 +68,8 @@ def add_member(
     campaign = get_campaign_detail(campaign_id, db)
 
     user_db = (
-        db.query(UserModel).filter(UserModel.id == campaign_member.user_id).first()
+        db.query(UserModel).filter(UserModel.id ==
+                                   campaign_member.user_id).first()
     )
 
     if user_db is None:
@@ -94,12 +95,13 @@ def add_member(
     db.commit()
     db.refresh(new_member)
 
-    return new_member, None
+    return new_member
 
 
 def delete_campaign(campaign_id: int, db: Session):
 
-    campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
+    campaign = db.query(CampaignModel).filter(
+        CampaignModel.id == campaign_id).first()
 
     db.delete(campaign)
     db.commit()
@@ -109,7 +111,8 @@ def delete_campaign(campaign_id: int, db: Session):
 
 def update_campaign(campaign_id: int, data: CampaignUpdateSchema, db: Session):
 
-    campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
+    campaign = db.query(CampaignModel).filter(
+        CampaignModel.id == campaign_id).first()
 
     updated_data = data.model_dump(exclude_unset=True)
 
@@ -131,7 +134,7 @@ def get_all_members(campaign_id: int, db: Session):
     )
 
     return [
-        {   
+        {
             "id": user.id,
             "full_name": user.full_name,
             "email": user.email,
@@ -142,15 +145,14 @@ def get_all_members(campaign_id: int, db: Session):
 
 
 def delete_member(campaign_id: int, user_id: int, db: Session):
-    member = db.query(CampaignMemberModel).filter(CampaignMemberModel.campaign_id == campaign_id, CampaignMemberModel.user_id == user_id).first()
-    
+    member = db.query(CampaignMemberModel).filter(CampaignMemberModel.campaign_id ==
+                                                  campaign_id, CampaignMemberModel.user_id == user_id).first()
+
     if member is None:
         return "MEMBER_NOT_EXIST"
-    
+
     if member.role == "owner":
         return "CANNOT_DELETE_OWNER"
-    
+
     db.delete(member)
     db.commit()
-    
-    

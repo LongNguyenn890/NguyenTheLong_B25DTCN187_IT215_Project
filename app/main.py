@@ -6,7 +6,7 @@ from db import Base, engine
 import models
 from core import AppException
 from core.exception_handler import http_exeption_handler
-from routers import auth_router, user_router, campaign_router
+from routers import auth_router, user_router, campaign_router, task_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -26,14 +26,15 @@ app.add_exception_handler(
     http_exeption_handler
 )
 
+
 @app.get("/")
 def health():
     return {
         "message": "API running"
     }
-   
 
 
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(campaign_router)
+app.include_router(task_router)

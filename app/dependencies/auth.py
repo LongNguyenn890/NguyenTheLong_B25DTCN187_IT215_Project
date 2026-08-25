@@ -29,6 +29,15 @@ def get_current_user(
 
         user_email = payload.get("sub")
 
+        token_type = payload.get("type")
+
+        if token_type != "access":
+            raise AppException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Xác thực thất bại",
+                error="Token không phải Access Token",
+            )
+
         if not user_email:
             raise AppException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

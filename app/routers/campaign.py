@@ -1,6 +1,6 @@
-from fastapi import APIRouter, status, Depends, Request
+from fastapi import APIRouter, status, Depends, Request, Query
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, Literal
 
 from schemas import (
     APIResponse,
@@ -9,6 +9,8 @@ from schemas import (
     CampaignMemberCreateSchema,
     CampaignUpdateSchema,
     CampaignMemberResponse,
+    CampaignTaskCreateSchema,
+    CampaignTaskResponse,
 )
 from dependencies import get_current_user, RoleCheck, CampaignRoleCheck
 from db import get_db
@@ -92,7 +94,8 @@ def get_campaign(
 
 @router.post(
     "/{campaign_id}/members",
-    dependencies=[Depends(RoleCheck(["user"])), Depends(CampaignRoleCheck(["owner"]))],
+    dependencies=[Depends(RoleCheck(["user"])), Depends(
+        CampaignRoleCheck(["owner"]))],
 )
 def add_member(
     req: Request,
@@ -126,7 +129,8 @@ def add_member(
 
 @router.patch(
     "/{campaign_id}",
-    dependencies=[Depends(RoleCheck(["user"])), Depends(CampaignRoleCheck(["owner"]))],
+    dependencies=[Depends(RoleCheck(["user"])), Depends(
+        CampaignRoleCheck(["owner"]))],
 )
 def update_campaign(
     req: Request,
@@ -146,7 +150,8 @@ def update_campaign(
 @router.delete(
     "/{campaign_id}",
     response_model=APIResponse,
-    dependencies=[Depends(RoleCheck(["user"])), Depends(CampaignRoleCheck(["owner"]))],
+    dependencies=[Depends(RoleCheck(["user"])), Depends(
+        CampaignRoleCheck(["owner"]))],
 )
 def delete_campaign(
     req: Request,
@@ -183,7 +188,8 @@ def get_members(req: Request, campaign_id: int, db: Session = Depends(get_db)):
 
 @router.delete(
     "/{campaign_id}/members/{user_id}",
-    dependencies=[Depends(RoleCheck(["user"])), Depends(CampaignRoleCheck(["owner"]))],
+    dependencies=[Depends(RoleCheck(["user"])), Depends(
+        CampaignRoleCheck(["owner"]))],
 )
 def remove_member(
     req: Request, campaign_id: int, user_id: int, db: Session = Depends(get_db)
@@ -208,5 +214,69 @@ def remove_member(
         status_code=status.HTTP_200_OK,
         message="Xóa thành viên thành công",
         data=None,
+        request=req,
+    )
+
+
+@router.post(
+    "/{campaign_id}/campaign_tasks",
+    response_model=APIResponse[CampaignTaskResponse],
+    dependencies=[
+        Depends(RoleCheck(["user"])),
+        Depends(CampaignRoleCheck(["owner", "member"])),
+    ],
+)
+def create_task(
+    req: Request,
+    campaign_id: int,
+    campaign_task: CampaignTaskCreateSchema,
+    db: Session = Depends(get_db),
+):
+    new_campaign = services.create_campaign_task(
+        campaign_id, campaign_task, db)
+
+    if new_campaign == "NOT_MEMBER":
+        raise AppException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tạo đầu việc chiến dịch không thành công",
+            error="Thành viên không tồn tại",
+        )
+
+    return make_success_response(
+        status_code=status.HTTP_200_OK,
+        message="Tạo mới chiến dịch thành công",
+        data=new_campaign,
+        request=req,
+    )
+
+
+@router.get(
+    "/{campaign_id}/campaign_tasks",
+    response_model=APIResponse[list[CampaignTaskResponse]],
+    dependencies=[
+        Depends(RoleCheck(["user"])),
+        Depends(CampaignRoleCheck(["owner", "member"])),
+    ],
+)
+def get_tasks(
+    req: Request,
+    campaign_id: int,
+    task_status: Optional[Literal["todo", "in_progress", "done"]] = Query(
+        None, alias="status"
+    ),
+    priority: Optional[Literal["low", "medium", "high"]] = Query(None),
+    title: Optional[str] = Query(None),
+    page: Optional[int] = 1,
+    size: Optional[int] = 5,
+    db: Session = Depends(get_db),
+):
+    tasks = services.get_campaign_tasks(
+        campaign_id, task_status, priority, title, page, size, db
+    )
+
+    return make_success_response(
+        status_code=status.HTTP_200_OK,
+        message=f"Danh sách đầu việc chiến dịch {campaign_id}",
+        data=tasks,
         request=req,
     )
