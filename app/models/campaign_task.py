@@ -24,7 +24,7 @@ class CampaignTaskModel(Base):
     campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(Text)
-    assignee_id = Column(Integer, ForeignKey("users.id"))
+    assignee_id = Column(Integer, ForeignKey("users.id"), default=None)
     status = Column(Enum(STATUS), nullable=False)
     priority = Column(Enum(PRIORITY), nullable=False)
     due_date = Column(DateTime)
@@ -36,3 +36,12 @@ class CampaignTaskModel(Base):
     campaign = relationship(
         "CampaignModel", back_populates="tasks"
     )  # Liên kết bảng Campaign
+
+    comments = relationship(
+        "CampaignTaskCommentModel", back_populates="task", cascade="all, delete-orphan"
+    )
+    attachments = relationship(
+        "CampaignTaskFileModel",
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )

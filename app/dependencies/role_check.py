@@ -34,10 +34,13 @@ class CampaignRoleCheck:
         current_user: UserModel = Depends(get_current_user),
         db: Session = Depends(get_db),
     ):
+        
+        if current_user.role == "admin":
+            return current_user
 
         existing_campaign = (
             db.query(CampaignModel).filter(
-                CampaignModel.id == campaign_id).first()
+                CampaignModel.id == campaign_id, CampaignModel.is_deleted == False).first()
         )
 
         if not existing_campaign:
@@ -47,9 +50,7 @@ class CampaignRoleCheck:
                 error="Chiến dịch không tồn tại",
             )
 
-        if current_user.role == "admin":
-            return current_user
-
+        
         membership = (
             db.query(CampaignMemberModel)
             .filter(
@@ -89,7 +90,9 @@ class CampaignTaskRoleCheck:
 
         task = (
             db.query(CampaignTaskModel).filter(
-                CampaignTaskModel.id == task_id).first()
+                CampaignTaskModel.id == task_id,
+                CampaignTaskModel.campaign.has(CampaignModel.is_deleted == False),
+            ).first()
         )
 
         if task is None:

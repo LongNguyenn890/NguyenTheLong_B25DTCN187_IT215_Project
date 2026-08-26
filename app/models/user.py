@@ -30,3 +30,4 @@ class UserModel(Base):
     assigned_tasks = relationship(
         "CampaignTaskModel", back_populates="assignee"
     )  # Liên kết bảng Campaign Task
+    task_comments = relationship("CampaignTaskCommentModel", back_populates="user")

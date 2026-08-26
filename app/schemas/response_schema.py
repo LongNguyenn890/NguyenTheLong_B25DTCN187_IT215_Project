@@ -52,6 +52,16 @@ class CampaignTaskResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+    
+    
+class CampaignTaskCommentResponse(BaseModel):
+    id: int
+    task_id: int
+    user_id: int
+    content: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class APIResponse(BaseModel, Generic[T]):

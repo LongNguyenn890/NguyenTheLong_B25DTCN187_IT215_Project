@@ -35,12 +35,17 @@ def get_campaign_list(keyword: str, current_user: UserModel, db: Session):
 
     query = db.query(CampaignModel)
 
+    query = query.filter(CampaignModel.is_deleted == False)
+
     if current_user.role != "admin":
-        query = query.join(
-            CampaignMemberModel, CampaignMemberModel.campaign_id == CampaignModel.id
-        ).filter(
-            CampaignMemberModel.user_id == current_user.id,
-            CampaignMemberModel.role.in_(["owner", "member"]),
+        query = (
+            query.join(
+                CampaignMemberModel, CampaignMemberModel.campaign_id == CampaignModel.id
+            )
+            .filter(
+                CampaignMemberModel.user_id == current_user.id,
+                CampaignMemberModel.role.in_(["owner", "member"]),
+            )
         )
 
     if keyword:
@@ -52,9 +57,8 @@ def get_campaign_list(keyword: str, current_user: UserModel, db: Session):
 
 
 def get_campaign_detail(campaign_id: int, db: Session):
-    query = (
-        db.query(CampaignModel)
-        .filter(CampaignModel.id == campaign_id)
+    query = db.query(CampaignModel).filter(
+        CampaignModel.id == campaign_id, CampaignModel.is_deleted == False
     )
 
     return query.first()
@@ -68,8 +72,7 @@ def add_member(
     campaign = get_campaign_detail(campaign_id, db)
 
     user_db = (
-        db.query(UserModel).filter(UserModel.id ==
-                                   campaign_member.user_id).first()
+        db.query(UserModel).filter(UserModel.id == campaign_member.user_id).first()
     )
 
     if user_db is None:
@@ -100,19 +103,18 @@ def add_member(
 
 def delete_campaign(campaign_id: int, db: Session):
 
-    campaign = db.query(CampaignModel).filter(
-        CampaignModel.id == campaign_id).first()
+    campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
 
-    db.delete(campaign)
+    campaign.is_deleted = True
     db.commit()
+    db.refresh(campaign)
 
     return None
 
 
 def update_campaign(campaign_id: int, data: CampaignUpdateSchema, db: Session):
 
-    campaign = db.query(CampaignModel).filter(
-        CampaignModel.id == campaign_id).first()
+    campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
 
     updated_data = data.model_dump(exclude_unset=True)
 
@@ -138,15 +140,21 @@ def get_all_members(campaign_id: int, db: Session):
             "id": user.id,
             "full_name": user.full_name,
             "email": user.email,
-            "role": role.value
+            "role": role.value,
         }
         for user, role in members
     ]
 
 
 def delete_member(campaign_id: int, user_id: int, db: Session):
-    member = db.query(CampaignMemberModel).filter(CampaignMemberModel.campaign_id ==
-                                                  campaign_id, CampaignMemberModel.user_id == user_id).first()
+    member = (
+        db.query(CampaignMemberModel)
+        .filter(
+            CampaignMemberModel.campaign_id == campaign_id,
+            CampaignMemberModel.user_id == user_id,
+        )
+        .first()
+    )
 
     if member is None:
         return "MEMBER_NOT_EXIST"

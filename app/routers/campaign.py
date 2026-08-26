@@ -15,7 +15,7 @@ from schemas import (
 from dependencies import get_current_user, RoleCheck, CampaignRoleCheck
 from db import get_db
 from core import AppException
-from utils import make_success_response
+from utils import make_success_response,add_log
 import services
 from models import UserModel
 
@@ -34,6 +34,9 @@ def create_campaign(
     db: Session = Depends(get_db),
 ):
     new_campaign = services.create_new_campaign(campaign, current_user, db)
+    
+    add_log(user_id=current_user.id, action="CREATE_NEW_CAMPAIGN", message=f"Tạo campaign {new_campaign.name}", db=db)
+    
     return make_success_response(
         status_code=status.HTTP_201_CREATED,
         message="Tạo chiến dịch mới thành công",
@@ -101,6 +104,7 @@ def add_member(
     req: Request,
     campaign_id: int,
     campaign_member: CampaignMemberCreateSchema,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     new_member, error = services.add_member(campaign_id, campaign_member, db)
@@ -118,6 +122,13 @@ def add_member(
             detail="Thêm thành viên mới thất bại",
             error="Thành viên đã tham gia chiến dịch",
         )
+        
+    add_log(
+        user_id=current_user.id,
+        action="ADD_MEMBER",
+        message=f"Thêm user {campaign_member.user_id} vào campaign {campaign_id}",
+        db=db,
+    )
 
     return make_success_response(
         status_code=status.HTTP_200_OK,
@@ -136,9 +147,13 @@ def update_campaign(
     req: Request,
     campaign_id: int,
     data: CampaignUpdateSchema,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     updated_campaign = services.update_campaign(campaign_id, data, db)
+    
+    add_log(user_id=current_user.id, action="UPDATE_CAMPAIGN", message=f"Cập nhật campaign {campaign_id}", db=db)
+    
     return make_success_response(
         status_code=status.HTTP_200_OK,
         message=f"Cập nhật chiến dịch thành công",
@@ -192,7 +207,7 @@ def get_members(req: Request, campaign_id: int, db: Session = Depends(get_db)):
         CampaignRoleCheck(["owner"]))],
 )
 def remove_member(
-    req: Request, campaign_id: int, user_id: int, db: Session = Depends(get_db)
+    req: Request, campaign_id: int, user_id: int,current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     deleted_members = services.delete_member(campaign_id, user_id, db)
 
@@ -209,6 +224,13 @@ def remove_member(
             detail="Xóa thành viên thất bại",
             error="Không thể xóa chủ sở hữu chiến dịch",
         )
+        
+    add_log(
+        user_id=current_user.id,
+        action="DELETE_MEMBER",
+        message=f"Xóa user {user_id} khỏi campaign {campaign_id}",
+        db=db,
+    )
 
     return make_success_response(
         status_code=status.HTTP_200_OK,
@@ -268,10 +290,11 @@ def get_tasks(
     title: Optional[str] = Query(None),
     page: Optional[int] = 1,
     size: Optional[int] = 5,
+    order_by: Optional[Literal["created_at", "due_date"]] = Query(None),
     db: Session = Depends(get_db),
 ):
     tasks = services.get_campaign_tasks(
-        campaign_id, task_status, priority, title, page, size, db
+        campaign_id, task_status, priority, title, page, size, order_by, db
     )
 
     return make_success_response(
