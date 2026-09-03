@@ -28,7 +28,7 @@ class CampaignTaskModel(Base):
     status = Column(Enum(STATUS), nullable=False)
     priority = Column(Enum(PRIORITY), nullable=False)
     due_date = Column(DateTime)
-    created_at = Column(DateTime, nullable=False, default=datetime.now())
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
 
     assignee = relationship(
         "UserModel", back_populates="assigned_tasks"

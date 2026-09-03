@@ -16,7 +16,7 @@ class UserReponse(BaseModel):
     email: str
     full_name: str
     role: str
-    is_active: bool
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -59,6 +59,19 @@ class CampaignTaskCommentResponse(BaseModel):
     task_id: int
     user_id: int
     content: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AttachmentResponse(BaseModel):
+    id: int
+    task_id: int
+    user_id: int
+    original_name: str
+    file_path: str
+    file_size: int
+    content_type: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

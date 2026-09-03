@@ -19,7 +19,7 @@ class UserModel(Base):
     full_name = Column(String(100), nullable=False)
     role = Column(Enum(UserRole), default="user")
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.now())
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
 
     campaigns_owned = relationship(
         "CampaignModel", back_populates="owner"

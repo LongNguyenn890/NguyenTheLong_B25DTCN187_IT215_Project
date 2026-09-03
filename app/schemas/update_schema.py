@@ -15,3 +15,7 @@ class CampaignTaskUpdateSchema(BaseModel):
     status: Optional[Literal["todo", "in_progress", "done"]] = None
     priority: Optional[Literal["low", "medium", "high"]] = None
     due_date: Optional[datetime] = None
+
+
+class CampaignTaskAssignSchema(BaseModel):
+    assignee_id: int = Field(..., ge=1)

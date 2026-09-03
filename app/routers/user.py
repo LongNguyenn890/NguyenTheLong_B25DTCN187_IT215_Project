@@ -10,10 +10,18 @@ from services import search_user
 
 ALLOWED_ADMIN = RoleCheck(allowed_role=["admin"])
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter(
+    prefix="/users",
+    tags=["Users"],
+)
 
 
-@router.get("/me", response_model=APIResponse[UserReponse])
+@router.get(
+    "/me",
+    summary="Xem thông tin cá nhân",
+    description="Trả về thông tin của người dùng đang đăng nhập.",
+    response_model=APIResponse[UserReponse],
+)
 def get_me(req: Request, current_user: dict = Depends(get_current_user)):
     return make_success_response(
         status_code=status.HTTP_200_OK,
@@ -25,6 +33,8 @@ def get_me(req: Request, current_user: dict = Depends(get_current_user)):
 
 @router.get(
     "/",
+    summary="Tìm kiếm người dùng",
+    description="Cho phép quản trị viên lọc người dùng theo từ khóa và trạng thái hoạt động.",
     response_model=APIResponse[list[UserReponse]],
     dependencies=[Depends(ALLOWED_ADMIN)],
 )

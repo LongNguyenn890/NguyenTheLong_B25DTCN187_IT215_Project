@@ -71,6 +71,9 @@ def add_member(
 ):
     campaign = get_campaign_detail(campaign_id, db)
 
+    if campaign is None:
+        return None, "CAMPAIGN_NOT_FOUND"
+
     user_db = (
         db.query(UserModel).filter(UserModel.id == campaign_member.user_id).first()
     )
@@ -98,23 +101,40 @@ def add_member(
     db.commit()
     db.refresh(new_member)
 
-    return new_member
+    return {
+        "id": user_db.id,
+        "full_name": user_db.full_name,
+        "email": user_db.email,
+        "role": new_member.role.value,
+    }, None
 
 
 def delete_campaign(campaign_id: int, db: Session):
 
-    campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
+    campaign = db.query(CampaignModel).filter(
+        CampaignModel.id == campaign_id,
+        CampaignModel.is_deleted == False,
+    ).first()
+
+    if campaign is None:
+        return None
 
     campaign.is_deleted = True
     db.commit()
     db.refresh(campaign)
 
-    return None
+    return campaign
 
 
 def update_campaign(campaign_id: int, data: CampaignUpdateSchema, db: Session):
 
-    campaign = db.query(CampaignModel).filter(CampaignModel.id == campaign_id).first()
+    campaign = db.query(CampaignModel).filter(
+        CampaignModel.id == campaign_id,
+        CampaignModel.is_deleted == False,
+    ).first()
+
+    if campaign is None:
+        return None
 
     updated_data = data.model_dump(exclude_unset=True)
 
@@ -128,6 +148,9 @@ def update_campaign(campaign_id: int, data: CampaignUpdateSchema, db: Session):
 
 
 def get_all_members(campaign_id: int, db: Session):
+    if get_campaign_detail(campaign_id, db) is None:
+        return "CAMPAIGN_NOT_FOUND"
+
     members = (
         db.query(UserModel, CampaignMemberModel.role)
         .join(CampaignMemberModel, CampaignMemberModel.user_id == UserModel.id)
@@ -147,6 +170,9 @@ def get_all_members(campaign_id: int, db: Session):
 
 
 def delete_member(campaign_id: int, user_id: int, db: Session):
+    if get_campaign_detail(campaign_id, db) is None:
+        return "CAMPAIGN_NOT_FOUND"
+
     member = (
         db.query(CampaignMemberModel)
         .filter(

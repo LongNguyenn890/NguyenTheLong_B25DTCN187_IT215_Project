@@ -14,31 +14,27 @@ Base.metadata.create_all(bind=engine)
 limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
-    title="Project_FastAPI_marketing",
+    title="Campaign Management API",
     version="1.0.0",
-    description="Dự án quản lí API về Marketing"
+    summary="API quản lý chiến dịch marketing",
+    description=(
+        "API hỗ trợ quản lý chiến dịch marketing, thành viên, đầu việc, "
+        "bình luận và tệp đính kèm. API sử dụng JWT để xác thực và phân quyền "
+        "theo vai trò người dùng trong từng chiến dịch."
+    ),
 )
 
 app.state.limiter = limiter
 
 
-app.add_exception_handler(
-    AppException,
-    http_exeption_handler
-)
+app.add_exception_handler(AppException, http_exeption_handler)
 
-app.mount(
-    "/storage",
-    StaticFiles(directory=STORAGE_FOLDER),
-    name="storage"
-)
+app.mount("/storage", StaticFiles(directory=STORAGE_FOLDER), name="storage")
 
 
 @app.get("/")
 def health():
-    return {
-        "message": "API running"
-    }
+    return {"message": "API running"}
 
 
 app.include_router(auth_router)

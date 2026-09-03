@@ -16,12 +16,17 @@ from db import get_db
 import services
 from utils import make_success_response
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter(
+    prefix="/auth",
+    tags=["Auth"],
+)
 limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post(
     "/register",
+    summary="Đăng ký tài khoản",
+    description="Tạo tài khoản người dùng mới bằng thông tin biểu mẫu.",
     status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[UserReponse],
 )
@@ -46,7 +51,11 @@ def register(
 
 
 @router.post(
-    "/login", status_code=status.HTTP_200_OK, response_model=APIResponse[TokenResponse]
+    "/login",
+    summary="Đăng nhập",
+    description="Xác thực thông tin đăng nhập và cấp access token cùng refresh token.",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[TokenResponse],
 )
 @limiter.limit("5/minute")
 def login(request: Request, data: UserLogin = Form(...), db: Session = Depends(get_db)):
@@ -54,7 +63,7 @@ def login(request: Request, data: UserLogin = Form(...), db: Session = Depends(g
 
     if login_result in ("INVALID_EMAIL", "INVALID_PASSWORD"):
         raise AppException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Đăng nhập thất bại",
             error="Email hoặc mật khẩu không hợp lệ",
         )
@@ -68,7 +77,7 @@ def login(request: Request, data: UserLogin = Form(...), db: Session = Depends(g
 
     if login_result == "OVER_MAX_LOGIN_COUNT":
         raise AppException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Tài khoản đã bị khóa",
             error="Vượt quá số lần đăng nhập",
         )
@@ -88,6 +97,8 @@ def login(request: Request, data: UserLogin = Form(...), db: Session = Depends(g
 
 @router.post(
     "/refresh",
+    summary="Làm mới access token",
+    description="Cấp access token mới từ refresh token còn hiệu lực.",
     status_code=status.HTTP_200_OK,
     response_model=APIResponse[TokenResponse],
 )

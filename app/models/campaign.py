@@ -13,7 +13,7 @@ class CampaignModel(Base):
     description = Column(Text)
     owner_id = Column(Integer, ForeignKey("users.id"))
     is_deleted = Column(Boolean, default=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.now())
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
 
     owner = relationship(
         "UserModel", back_populates="campaigns_owned"
@@ -36,7 +36,7 @@ class CampaignMemberModel(Base):
     campaign_id = Column(Integer, ForeignKey("campaigns.id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     role = Column(Enum(Role), nullable=False)
-    joined_at = Column(DateTime, nullable=False, default=datetime.now())
+    joined_at = Column(DateTime, nullable=False, default=datetime.now)
 
     campaign = relationship("CampaignModel", back_populates="campaign_members")
     user = relationship("UserModel", back_populates="campaign_memberships")

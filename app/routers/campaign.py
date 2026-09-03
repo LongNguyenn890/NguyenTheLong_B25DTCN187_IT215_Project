@@ -19,11 +19,16 @@ from utils import make_success_response,add_log
 import services
 from models import UserModel
 
-router = APIRouter(prefix="/campaigns", tags=["Campaign"])
+router = APIRouter(
+    prefix="/campaigns",
+    tags=["Campaign"],
+)
 
 
 @router.post(
     "/",
+    summary="Tạo chiến dịch",
+    description="Tạo chiến dịch mới và gán người dùng hiện tại làm chủ sở hữu.",
     response_model=APIResponse[CampaignResponse],
     dependencies=[Depends(RoleCheck(["user"]))],
 )
@@ -47,6 +52,8 @@ def create_campaign(
 
 @router.get(
     "/",
+    summary="Danh sách chiến dịch",
+    description="Lấy các chiến dịch mà người dùng hiện tại sở hữu hoặc tham gia.",
     response_model=APIResponse[list[CampaignResponse]],
     dependencies=[Depends(RoleCheck(["user"]))],
 )
@@ -67,6 +74,8 @@ def get_campaigns(
 
 @router.get(
     "/{campaign_id}",
+    summary="Chi tiết chiến dịch",
+    description="Xem thông tin chi tiết của chiến dịch mà người dùng có quyền truy cập.",
     response_model=APIResponse[CampaignResponse],
     dependencies=[
         Depends(RoleCheck(["user"])),
@@ -97,6 +106,10 @@ def get_campaign(
 
 @router.post(
     "/{campaign_id}/members",
+    summary="Thêm thành viên",
+    description="Thêm người dùng vào chiến dịch; chỉ chủ sở hữu được phép thực hiện.",
+    status_code=status.HTTP_201_CREATED,
+    response_model=APIResponse[CampaignMemberResponse],
     dependencies=[Depends(RoleCheck(["user"])), Depends(
         CampaignRoleCheck(["owner"]))],
 )
@@ -108,6 +121,14 @@ def add_member(
     db: Session = Depends(get_db),
 ):
     new_member, error = services.add_member(campaign_id, campaign_member, db)
+
+    if error == "CAMPAIGN_NOT_FOUND":
+        raise AppException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Thêm thành viên mới thất bại",
+            error="Chiến dịch không tồn tại",
+        )
+
 
     if error == "NOT_EXISTED_USER":
         raise AppException(
@@ -131,7 +152,7 @@ def add_member(
     )
 
     return make_success_response(
-        status_code=status.HTTP_200_OK,
+        status_code=status.HTTP_201_CREATED,
         message=f"Thêm thành viên mới thành công",
         data=new_member,
         request=req,
@@ -140,6 +161,9 @@ def add_member(
 
 @router.patch(
     "/{campaign_id}",
+    summary="Cập nhật chiến dịch",
+    description="Cập nhật thông tin chiến dịch; chỉ chủ sở hữu được phép thực hiện.",
+    response_model=APIResponse[CampaignResponse],
     dependencies=[Depends(RoleCheck(["user"])), Depends(
         CampaignRoleCheck(["owner"]))],
 )
@@ -151,6 +175,13 @@ def update_campaign(
     db: Session = Depends(get_db),
 ):
     updated_campaign = services.update_campaign(campaign_id, data, db)
+
+    if updated_campaign is None:
+        raise AppException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cập nhật chiến dịch thất bại",
+            error="Chiến dịch không tồn tại",
+        )
     
     add_log(user_id=current_user.id, action="UPDATE_CAMPAIGN", message=f"Cập nhật campaign {campaign_id}", db=db)
     
@@ -164,16 +195,33 @@ def update_campaign(
 
 @router.delete(
     "/{campaign_id}",
-    response_model=APIResponse,
+    summary="Xóa chiến dịch",
+    description="Xóa một chiến dịch do người dùng hiện tại sở hữu.",
+    response_model=APIResponse[CampaignResponse],
     dependencies=[Depends(RoleCheck(["user"])), Depends(
         CampaignRoleCheck(["owner"]))],
 )
 def delete_campaign(
     req: Request,
     campaign_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     deleted_campaign = services.delete_campaign(campaign_id, db)
+
+    if deleted_campaign is None:
+        raise AppException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Xóa chiến dịch thất bại",
+            error="Chiến dịch không tồn tại hoặc đã bị xóa",
+        )
+
+    add_log(
+        user_id=current_user.id,
+        action="DELETE_CAMPAIGN",
+        message=f"Xóa campaign {campaign_id}",
+        db=db,
+    )
 
     return make_success_response(
         status_code=status.HTTP_200_OK,
@@ -185,6 +233,8 @@ def delete_campaign(
 
 @router.get(
     "/{campaign_id}/members",
+    summary="Danh sách thành viên",
+    description="Lấy danh sách thành viên của chiến dịch.",
     response_model=APIResponse[list[CampaignMemberResponse]],
     dependencies=[
         Depends(RoleCheck(["user"])),
@@ -193,6 +243,14 @@ def delete_campaign(
 )
 def get_members(req: Request, campaign_id: int, db: Session = Depends(get_db)):
     members_list = services.get_all_members(campaign_id, db)
+
+    if members_list == "CAMPAIGN_NOT_FOUND":
+        raise AppException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lấy danh sách thành viên thất bại",
+            error="Chiến dịch không tồn tại",
+        )
+
     return make_success_response(
         status_code=status.HTTP_200_OK,
         message="Danh sách thành viên chiến dịch",
@@ -203,6 +261,8 @@ def get_members(req: Request, campaign_id: int, db: Session = Depends(get_db)):
 
 @router.delete(
     "/{campaign_id}/members/{user_id}",
+    summary="Xóa thành viên",
+    description="Xóa thành viên khỏi chiến dịch; không thể xóa chủ sở hữu.",
     dependencies=[Depends(RoleCheck(["user"])), Depends(
         CampaignRoleCheck(["owner"]))],
 )
@@ -211,6 +271,13 @@ def remove_member(
 ):
     deleted_members = services.delete_member(campaign_id, user_id, db)
 
+    if deleted_members == "CAMPAIGN_NOT_FOUND":
+        raise AppException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Xóa thành viên thất bại",
+            error="Chiến dịch không tồn tại",
+        )
+
     if deleted_members == "MEMBER_NOT_EXIST":
         raise AppException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -218,7 +285,7 @@ def remove_member(
             error="Không tìm thấy thành viên",
         )
 
-    if deleted_members.role == "CANNOT_DELETE_OWNER":
+    if deleted_members == "CANNOT_DELETE_OWNER":
         raise AppException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Xóa thành viên thất bại",
@@ -242,6 +309,9 @@ def remove_member(
 
 @router.post(
     "/{campaign_id}/campaign_tasks",
+    summary="Tạo đầu việc",
+    description="Tạo một đầu việc mới trong chiến dịch.",
+    status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[CampaignTaskResponse],
     dependencies=[
         Depends(RoleCheck(["user"])),
@@ -252,6 +322,7 @@ def create_task(
     req: Request,
     campaign_id: int,
     campaign_task: CampaignTaskCreateSchema,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     new_campaign = services.create_campaign_task(
@@ -264,9 +335,16 @@ def create_task(
             error="Thành viên không tồn tại",
         )
 
+    add_log(
+        user_id=current_user.id,
+        action="CREATE_TASK",
+        message=f"Tạo task trong campaign {campaign_id}",
+        db=db,
+    )
+
     return make_success_response(
-        status_code=status.HTTP_200_OK,
-        message="Tạo mới chiến dịch thành công",
+        status_code=status.HTTP_201_CREATED,
+        message="Tạo đầu việc thành công",
         data=new_campaign,
         request=req,
     )
@@ -274,6 +352,8 @@ def create_task(
 
 @router.get(
     "/{campaign_id}/campaign_tasks",
+    summary="Danh sách đầu việc",
+    description="Lấy danh sách đầu việc với bộ lọc, sắp xếp và phân trang.",
     response_model=APIResponse[list[CampaignTaskResponse]],
     dependencies=[
         Depends(RoleCheck(["user"])),
@@ -288,8 +368,8 @@ def get_tasks(
     ),
     priority: Optional[Literal["low", "medium", "high"]] = Query(None),
     title: Optional[str] = Query(None),
-    page: Optional[int] = 1,
-    size: Optional[int] = 5,
+    page: int = Query(1, ge=1, description="Số trang, bắt đầu từ 1."),
+    size: int = Query(5, ge=1, le=100, description="Số đầu việc mỗi trang."),
     order_by: Optional[Literal["created_at", "due_date"]] = Query(None),
     db: Session = Depends(get_db),
 ):

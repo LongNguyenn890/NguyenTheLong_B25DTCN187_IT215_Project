@@ -26,6 +26,7 @@ def gen_access_token(email: str, full_name: str, role: str) -> str:
         "role": role,
         "full_name": full_name,
         "type": "access",
+        "iat": now,
         "exp": expire_time,
     }
 
@@ -43,6 +44,7 @@ def gen_refresh_token(email: str, full_name: str, role: str) -> str:
         "role": role,
         "full_name": full_name,
         "type": "refresh",
+        "iat": now,
         "exp": expire_time,
     }
 
@@ -52,8 +54,14 @@ def gen_refresh_token(email: str, full_name: str, role: str) -> str:
 
 
 def decode_access_token(token: str) -> dict:
-    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("type") != "access":
+        raise jwt.InvalidTokenError("Token is not an access token")
+    return payload
 
 
 def decode_refresh_token(token: str) -> dict:
-    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("type") != "refresh":
+        raise jwt.InvalidTokenError("Token is not a refresh token")
+    return payload

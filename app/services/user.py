@@ -9,7 +9,7 @@ def get_user(email: str, db: Session):
     return db.query(UserModel).filter(UserModel.email == email).first()
 
 
-def search_user(keyword: Optional[str], status: bool, db: Session):
+def search_user(keyword: Optional[str], status: Optional[bool], db: Session):
     query = db.query(UserModel)
 
     if keyword:
@@ -20,10 +20,8 @@ def search_user(keyword: Optional[str], status: bool, db: Session):
             )
         )
 
-    if status:
-        query = query.filter(
-            UserModel.is_active == status
-        )
+    if status is not None:
+        query = query.filter(UserModel.is_active == status)
 
     users = query.all()
 

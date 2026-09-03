@@ -1,8 +1,7 @@
 from fastapi import Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from jose import JWTError
-from jwt import ExpiredSignatureError, InvalidSignatureError
+from jwt import ExpiredSignatureError, InvalidTokenError
 
 from db import get_db
 from core import decode_access_token, AppException
@@ -52,14 +51,7 @@ def get_current_user(
             error="Token hết hạn",
         )
 
-    except JWTError:
-        raise AppException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Xác thực thất bại",
-            error="Token không hợp lệ",
-        )
-
-    except InvalidSignatureError:
+    except InvalidTokenError:
         raise AppException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Xác thực thất bại",

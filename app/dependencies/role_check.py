@@ -35,9 +35,6 @@ class CampaignRoleCheck:
         db: Session = Depends(get_db),
     ):
         
-        if current_user.role == "admin":
-            return current_user
-
         existing_campaign = (
             db.query(CampaignModel).filter(
                 CampaignModel.id == campaign_id, CampaignModel.is_deleted == False).first()
@@ -49,6 +46,10 @@ class CampaignRoleCheck:
                 detail="Truy cập không thành công",
                 error="Chiến dịch không tồn tại",
             )
+            
+        if current_user.role == "admin":
+            return current_user
+        
 
         
         membership = (
@@ -63,7 +64,7 @@ class CampaignRoleCheck:
         if not membership:
             raise AppException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Bạn không phải thành viên của chiến dịch",
+                detail="Bạn không phải thành viên / người sở hữu của chiến dịch",
                 error=None,
             )
 

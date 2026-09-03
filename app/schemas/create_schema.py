@@ -30,7 +30,6 @@ class CampaignMemberCreateSchema(BaseModel):
 class CampaignTaskCreateSchema(BaseModel):
     title: str = Field(..., min_length=4, max_length=255)
     description: Optional[str] = None
-    status: Literal["todo", "in_progress", "done"] = "todo"
     priority: Literal["low", "medium", "high"] = "medium"
     due_date: Optional[datetime] = None
     
